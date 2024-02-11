@@ -1,4 +1,24 @@
-const express = require("express");
+import express from "express";
+import { sequelize } from "./config.js";
+import { User } from "./user.js";
+
+// const sequelize = new Sequelize('postgres://user:pass@example.com:5432/dbname')
+
+try {
+  await sequelize.authenticate();
+  await sequelize.sync();
+  console.log("Connection has been established successfully.");
+} catch (error) {
+  console.error("Unable to connect to the database:", error);
+}
+
+// const jane = await User.create({
+//   firstName: "Manoj",
+//   lastName: "Dhanekula",
+// });
+
+// middleware -> converting the body
+
 const app = express();
 const data = [
   {
@@ -111,6 +131,72 @@ const data = [
   },
 ];
 const PORT = 4000;
+// middleware -> converting the body
+app.use(express.json());
+
+app.get("/user", async function (request, response) {
+  const userData = await User.findAll();
+  response.send(userData);
+});
+app.get("/user/:id", async function (request, response) {
+  const { id } = request.params;
+  const userData = await User.findOne({
+    where: {
+      id: id,
+    },
+  });
+  const not_Found = { msg: "ID Not Found" };
+  console.log(not_Found);
+
+  userData ? response.send(userData) : response.status(404).send(not_Found);
+});
+
+app.post("/user", async function (request, response) {
+  console.log(request.body);
+
+  const { firstName, lastName } = request.body;
+  const userDataPost = await User.create({ firstName, lastName });
+  const not_Found = { msg: "Not Inserted" };
+  userDataPost
+    ? response.send(userDataPost)
+    : response.status(404).send(not_Found);
+});
+
+app.put("/user/:id", async function (request, response) {
+  console.log(request.body);
+  const { id } = request.params;
+
+  const { firstName, lastName } = request.body;
+  const userDataUpdate = await User.update(
+    { firstName, lastName },
+    {
+      where: {
+        id: id,
+      },
+    }
+  );
+  const not_Found = { msg: "Not Updated" };
+  userDataUpdate
+    ? response.send(userDataUpdate)
+    : response.status(404).send(not_Found);
+});
+
+app.delete("/user/:id", async function (request, response) {
+  const { id } = request.params;
+  // const { firstName, lastName } = request.body;
+  const userDataDelete = await User.destroy({
+    where: {
+      id: id,
+    },
+  });
+
+  console.log(dataDelete);
+  console.log(userDataDelete);
+  const not_Found = { msg: "Not found" };
+  userDataDelete
+    ? response.send(dataDelete)
+    : response.status(404).send(not_Found);
+});
 
 app.get("/moviesDetail", function (request, response) {
   console.log(request.query);
@@ -130,7 +216,7 @@ app.get("/moviesDetail/:id", function (request, response) {
   const not_Found = { msg: "Movie Not Found" };
   console.log(not_Found);
 
-  const movieId = data.filter((x) => x.id === request.params.id);
+  const movieId = data.find((x) => x.id === request.params.id);
 
   movieId ? response.send(movieId) : response.status(404).send(not_Found);
 });
